@@ -1,0 +1,211 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Sudoku Solver</title>
+  <meta name="description" content="Sudoku Solver">
+  <meta name="author" content="TAS">
+
+  <!--<link rel="stylesheet" href="css/styles.css?v=1.0">-->
+
+  <!--[if lt IE 9]>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+<div id="puzzle"></div>
+<div id="params" style="text-align: center"></div>
+<div id="buttons" style="margin: 0px auto; text-align: center;"></div>
+<script>
+
+function add_cell(location, root, i, j) {
+	var inputSize = Math.max(1, Math.ceil(Math.log10(root*root + 1) - 1));
+	var cell = document.createElement("INPUT");
+	cell.setAttribute("type", "text");
+	cell.setAttribute("class", "cell");
+	cell.setAttribute("id", "c" + i + "x" + j);
+	cell.setAttribute("row", i);
+	cell.setAttribute("col", j);
+	cell.setAttribute("size", inputSize);
+	cell.style.height = "" + (inputSize * 10 + 5) + "px";
+	cell.style.width = "" + (inputSize * 10 + 5) + "px";
+	cell.style.textAlign = "center";
+	location.appendChild(cell);
+}
+
+function add_gridroot_input(location, root) {
+	var label = document.createElement("LABEL");
+	label.innerText = "Grid Size:"
+	label.setAttribute("for", "gridroot");
+	label.style.textAlign = "left";
+	var cell = document.createElement("INPUT");
+	cell.setAttribute("type", "text");
+	cell.setAttribute("class", "param");
+	cell.setAttribute("id", "gridroot");
+	cell.style.margin = "auto 5px 5px 5px";
+	cell.style.width = "20px";
+	cell.style.textAlign = "right";
+	cell.value = root;
+	cell.onchange = function () {
+		var puzzle = document.getElementById("puzzle");
+		while (puzzle.firstChild) {
+		    puzzle.removeChild(puzzle.firstChild);
+		}
+		add_grid(puzzle, cell.value);
+	}
+	location.appendChild(label);
+	location.appendChild(cell);
+}
+
+function add_box(location, root, x, y) {
+	var table = document.createElement("TABLE");
+	for (var i = 0; i < root; i++) {
+		var row = document.createElement("TR");
+		for (var j = 0; j < root; j++) {
+			var column = document.createElement("TD");
+			add_cell(column, root, x * root + i, y * root + j);
+			row.appendChild(column);
+		}
+		table.appendChild(row);
+	}
+	location.appendChild(table);
+}
+
+function add_grid(location, root) {
+	var table = document.createElement("TABLE");
+	table.style.margin = "0px auto";
+	for (var i = 0; i < root; i++) {
+		var row = document.createElement("TR");
+		for (var j = 0; j < root; j++) {
+			var column = document.createElement("TD");
+			add_box(column, root, i, j);
+			row.appendChild(column);
+		}
+		table.appendChild(row);
+	}
+	location.appendChild(table);
+}
+
+function update_grid(obj) {
+	if (Array.isArray(obj))
+	{
+		var cells = document.getElementsByClassName("cell");
+		if (obj.length == cells.length)
+		{
+			var cellsArray = Array.prototype.slice.call(cells, 0);
+			cellsArray.sort(function(a, b) {
+				var ra = parseInt(a.getAttribute("row"));
+				var rb = parseInt(b.getAttribute("row"));
+				if (ra == rb)
+				{
+					var ca = parseInt(a.getAttribute("col"));
+					var cb = parseInt(b.getAttribute("col"));
+					return ca < cb ? -1 : (ca == cb) ? 0 : 1;
+				}
+				return ra < rb ? -1 : 1;
+			});
+			for (var i = 0; i < obj.length; i++) {
+				cellsArray[i].value = obj[i];
+			}
+		}
+	}
+}
+
+function post(path, params, method) {
+    method = method || "post"; // Set method to post by default if not specified.
+
+    // The rest of this code assumes you are not using a library.
+    // It can be made less wordy if you use one.
+    var form = document.createElement("form");
+    form.setAttribute("method", method);
+    form.setAttribute("action", path);
+
+    for(var key in params) {
+        if(params.hasOwnProperty(key)) {
+            var hiddenField = document.createElement("input");
+            hiddenField.setAttribute("type", "hidden");
+            hiddenField.setAttribute("name", key);
+            hiddenField.setAttribute("value", params[key]);
+
+            form.appendChild(hiddenField);
+         }
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function solve(event) {
+	var xhr = new XMLHttpRequest();
+	xhr.open('GET', "./solver.cgi?" + JSON.stringify(get_state()), true);
+
+	xhr.onreadystatechange = function(event) {
+		if (xhr.readyState == 4 && xhr.status == 200) {
+        	update_grid(JSON.parse(xhr.responseText));
+		}
+	}
+
+	xhr.send();
+}
+
+function add_solve_button(location) {
+	var button = document.createElement("BUTTON");
+	button.onclick = solve;
+	var buttonText = document.createTextNode("Solve");
+	button.appendChild(buttonText);
+	location.appendChild(button);
+}
+
+function add_clear_button(location) {
+	var button = document.createElement("BUTTON");
+	button.onclick = clear_state;
+	var buttonText = document.createTextNode("Clear");
+	button.appendChild(buttonText);
+	location.appendChild(button);
+}
+
+function get_cell(x, y) {
+	return document.getElementById("c" + x + "x" + y);
+}
+
+function get_state() {
+	var result = new Array();
+	var cells = document.getElementsByClassName("cell");
+	var cellsArray = Array.prototype.slice.call(cells, 0);
+	cellsArray.sort(function(a, b) {
+		var ra = parseInt(a.getAttribute("row"));
+		var rb = parseInt(b.getAttribute("row"));
+		if (ra == rb)
+		{
+			var ca = parseInt(a.getAttribute("col"));
+			var cb = parseInt(b.getAttribute("col"));
+			return ca < cb ? -1 : (ca == cb) ? 0 : 1;
+		}
+		return ra < rb ? -1 : 1;
+	});
+
+	for (var i = 0; i < cellsArray.length; i++) {
+		result.push(parseInt(cellsArray[i].value || "0"));
+	}
+	return result;
+}
+
+function clear_state() {
+	var cells = document.getElementsByClassName("cell");
+
+	for (var i = 0; i < cells.length; i++) {
+		cells[i].value = "";
+	}
+}
+
+add_grid(document.getElementById("puzzle"), 3);
+add_gridroot_input(document.getElementById("params"), 3);
+add_solve_button(document.getElementById("buttons"));
+add_clear_button(document.getElementById("buttons"));
+
+</script>
+</body>
+</html>
