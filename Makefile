@@ -6,28 +6,33 @@ LDFLAGS =
 LIBS =
 CC = g++
 
+OBJDIR = obj
+
 SRC = $(wildcard src/*.cpp)
-OBJ = $(patsubst src/%.cpp, obj/%.o, $(SRC))
+OBJ = $(patsubst src/%.cpp, ${OBJDIR}/%.o, $(SRC))
 
 MAIN_SRC = $(wildcard src/*main.cpp)
 
 COMMON_SRC = $(filter-out $(MAIN_SRC), $(SRC))
-COMMON_OBJ = $(patsubst src/%.cpp, obj/%.o, $(COMMON_SRC))
+COMMON_OBJ = $(patsubst src/%.cpp, ${OBJDIR}/%.o, $(COMMON_SRC))
 
 all: $(PROG_CGI) $(PROG_CMD)
 
-$(PROG_CGI): $(COMMON_OBJ) obj/cgi_main.o
-	$(CC) $(CFLAGS) $(LDFLAGS) $(LIBS) $(COMMON_OBJ) obj/cgi_main.o -o $(PROG_CGI)
+$(PROG_CGI): $(COMMON_OBJ) ${OBJDIR}/cgi_main.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LIBS) $(COMMON_OBJ) ${OBJDIR}/cgi_main.o -o $(PROG_CGI)
 
-$(PROG_CMD): $(COMMON_OBJ) obj/cmd_main.o
-	$(CC) $(CFLAGS) $(LDFLAGS) $(LIBS) $(COMMON_OBJ) obj/cmd_main.o -o $(PROG_CMD)
+$(PROG_CMD): $(COMMON_OBJ) ${OBJDIR}/cmd_main.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LIBS) $(COMMON_OBJ) ${OBJDIR}/cmd_main.o -o $(PROG_CMD)
 
-obj/%.o: src/%.cpp
+${OBJDIR}/%.o: src/%.cpp ${OBJDIR}
 	$(CC) $(CFLAGS) -c $< -o $@
+
+${OBJDIR}:
+	mkdir -p ${OBJDIR}
 
 .PHONY: clean realclean
 clean:
-	rm -rf obj/*.o
+	rm -rf ${OBJDIR}/*.o
 realclean: clean
 	rm $(PROG_CMD) $(PROG_CGI)
 
